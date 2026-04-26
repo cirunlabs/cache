@@ -1,0 +1,55 @@
+name: 'Cache (S3-compatible)'
+description: 'Cache artifacts to any S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2, MinIO, …)'
+author: 'cirunlabs'
+inputs:
+  path:
+    description: 'A list of files, directories, and wildcard patterns to cache and restore'
+    required: true
+  key:
+    description: 'An explicit key for restoring and saving the cache'
+    required: true
+  restore-keys:
+    description: 'An ordered multiline string listing the prefix-matched keys, that are used for restoring stale cache if no cache hit occurred for key.'
+    required: false
+  enableCrossOsArchive:
+    description: 'When enabled, archives are portable across operating systems'
+    default: 'false'
+    required: false
+  fail-on-cache-miss:
+    description: 'Fail the workflow if cache entry is not found'
+    default: 'false'
+    required: false
+  lookup-only:
+    description: 'Check if a cache entry exists for the given input(s) (key, restore-keys) without downloading the cache'
+    default: 'false'
+    required: false
+  s3-bucket:
+    description: 'S3 bucket name (required).'
+    required: true
+  s3-endpoint:
+    description: 'S3 endpoint URL. Required for non-AWS-S3 backends — e.g. `https://<account-id>.r2.cloudflarestorage.com` for R2, `https://s3.us-west-002.backblazeb2.com` for B2. Leave unset for AWS S3.'
+    required: false
+  s3-region:
+    description: 'S3 region. Default `auto` (works for R2). For AWS S3, set the bucket region (e.g. `eu-west-1`).'
+    default: 'auto'
+    required: false
+  s3-access-key-id:
+    description: 'S3 access key ID. Use a repository secret: `${{ secrets.R2_ACCESS_KEY_ID }}`.'
+    required: false
+  s3-secret-access-key:
+    description: 'S3 secret access key. Use a repository secret: `${{ secrets.R2_SECRET_ACCESS_KEY }}`.'
+    required: false
+  s3-prefix:
+    description: 'Optional key prefix (subfolder) inside the bucket. Useful for sharing one bucket across multiple repos.'
+    required: false
+outputs:
+  cache-hit:
+    description: 'A boolean value to indicate an exact match was found for the primary key'
+runs:
+  using: 'node24'
+  main: '../dist/s3-main/index.js'
+  post: '../dist/s3-post/index.js'
+  post-if: "success()"
+branding:
+  icon: 'archive'
+  color: 'gray-dark'

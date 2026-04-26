@@ -5,7 +5,7 @@
   "description": "Cache dependencies and build outputs",
   "main": "dist/restore/index.js",
   "scripts": {
-    "build": "tsc && ncc build -o dist/restore src/restore.ts && ncc build -o dist/save src/save.ts && ncc build -o dist/restore-only src/restoreOnly.ts && ncc build -o dist/save-only src/saveOnly.ts",
+    "build": "tsc && ncc build -o dist/restore src/restore.ts && ncc build -o dist/save src/save.ts && ncc build -o dist/restore-only src/restoreOnly.ts && ncc build -o dist/save-only src/saveOnly.ts && ncc build -o dist/s3-main src/s3Main.ts && ncc build -o dist/s3-post src/s3Post.ts && ncc build -o dist/s3-restore-only src/s3RestoreOnly.ts && ncc build -o dist/s3-save-only src/s3SaveOnly.ts",
     "test": "tsc --noEmit && jest --coverage",
     "lint": "eslint **/*.ts --cache",
     "format": "prettier --write **/*.ts",
@@ -26,7 +26,9 @@
     "@actions/cache": "^5.0.5",
     "@actions/core": "^2.0.3",
     "@actions/exec": "^2.0.0",
-    "@actions/io": "^2.0.0"
+    "@actions/io": "^2.0.0",
+    "@aws-sdk/client-s3": "^3.1037.0",
+    "@aws-sdk/lib-storage": "^3.1037.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.14",

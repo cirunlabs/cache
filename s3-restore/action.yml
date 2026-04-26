@@ -1,0 +1,57 @@
+name: 'Restore Cache (S3-compatible)'
+description: 'Restore cache from any S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2, MinIO, …)'
+author: 'cirunlabs'
+inputs:
+  path:
+    description: 'A list of files, directories, and wildcard patterns to restore'
+    required: true
+  key:
+    description: 'An explicit key for restoring the cache'
+    required: true
+  restore-keys:
+    description: 'An ordered multiline string listing the prefix-matched keys'
+    required: false
+  enableCrossOsArchive:
+    description: 'When enabled, archives are portable across operating systems'
+    default: 'false'
+    required: false
+  fail-on-cache-miss:
+    description: 'Fail the workflow if cache entry is not found'
+    default: 'false'
+    required: false
+  lookup-only:
+    description: 'Check if a cache entry exists for the given input(s) (key, restore-keys) without downloading the cache'
+    default: 'false'
+    required: false
+  s3-bucket:
+    description: 'S3 bucket name (required).'
+    required: true
+  s3-endpoint:
+    description: 'S3 endpoint URL. Required for non-AWS-S3 backends.'
+    required: false
+  s3-region:
+    description: 'S3 region. Default `auto`.'
+    default: 'auto'
+    required: false
+  s3-access-key-id:
+    description: 'S3 access key ID. Use a repository secret.'
+    required: false
+  s3-secret-access-key:
+    description: 'S3 secret access key. Use a repository secret.'
+    required: false
+  s3-prefix:
+    description: 'Optional key prefix inside the bucket.'
+    required: false
+outputs:
+  cache-hit:
+    description: 'A boolean value to indicate an exact match was found for the primary key'
+  cache-primary-key:
+    description: 'A resolved cache key for which cache match was attempted'
+  cache-matched-key:
+    description: 'Key of the cache that was restored'
+runs:
+  using: 'node24'
+  main: '../dist/s3-restore-only/index.js'
+branding:
+  icon: 'archive'
+  color: 'gray-dark'

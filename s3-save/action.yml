@@ -1,0 +1,39 @@
+name: 'Save Cache (S3-compatible)'
+description: 'Save cache to any S3-compatible bucket (AWS S3, Cloudflare R2, Backblaze B2, MinIO, …)'
+author: 'cirunlabs'
+inputs:
+  path:
+    description: 'A list of files, directories, and wildcard patterns to cache'
+    required: true
+  key:
+    description: 'An explicit key for saving the cache'
+    required: true
+  enableCrossOsArchive:
+    description: 'When enabled, archives are portable across operating systems'
+    default: 'false'
+    required: false
+  s3-bucket:
+    description: 'S3 bucket name (required).'
+    required: true
+  s3-endpoint:
+    description: 'S3 endpoint URL. Required for non-AWS-S3 backends.'
+    required: false
+  s3-region:
+    description: 'S3 region. Default `auto`.'
+    default: 'auto'
+    required: false
+  s3-access-key-id:
+    description: 'S3 access key ID. Use a repository secret.'
+    required: false
+  s3-secret-access-key:
+    description: 'S3 secret access key. Use a repository secret.'
+    required: false
+  s3-prefix:
+    description: 'Optional key prefix inside the bucket.'
+    required: false
+runs:
+  using: 'node24'
+  main: '../dist/s3-save-only/index.js'
+branding:
+  icon: 'archive'
+  color: 'gray-dark'
