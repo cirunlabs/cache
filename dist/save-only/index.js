@@ -235,7 +235,7 @@ function restoreCacheV1(paths_1, primaryKey_1, restoreKeys_1, options_1) {
 function restoreCacheV2(paths_1, primaryKey_1, restoreKeys_1, options_1) {
     return __awaiter(this, arguments, void 0, function* (paths, primaryKey, restoreKeys, options, enableCrossOsArchive = false) {
         // Override UploadOptions to force the use of Azure
-        options = Object.assign(Object.assign({}, options), { useAzureSdk: true });
+        options = Object.assign(Object.assign({}, options), { useAzureSdk: false }); /* CIRUNLABS restore-only */
         restoreKeys = restoreKeys || [];
         const keys = [primaryKey, ...restoreKeys];
         core.debug('Resolved Keys:');
@@ -1300,7 +1300,7 @@ function downloadCache(archiveLocation, archivePath, options) {
     return __awaiter(this, void 0, void 0, function* () {
         const archiveUrl = new url_1.URL(archiveLocation);
         const downloadOptions = (0, options_1.getDownloadOptions)(options);
-        if (archiveUrl.hostname.endsWith('.blob.core.windows.net')) {
+        if (true /* CIRUNLABS bypass hostname check */) {
             if (downloadOptions.useAzureSdk) {
                 // Use Azure storage SDK to download caches hosted on Azure to improve speed and reliability.
                 yield (0, downloadUtils_1.downloadCacheStorageSDK)(archiveLocation, archivePath, downloadOptions);
@@ -1985,7 +1985,7 @@ function downloadCacheHttpClientConcurrent(archiveLocation, archivePath, options
                 throw new Error(`Could not interpret Content-Length: ${length}`);
             }
             const downloads = [];
-            const blockSize = 4 * 1024 * 1024;
+            const blockSize = 32 * 1024 * 1024; /* CIRUNLABS was 4 MB */
             for (let offset = 0; offset < length; offset += blockSize) {
                 const count = Math.min(blockSize, length - offset);
                 downloads.push({
