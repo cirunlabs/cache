@@ -42,6 +42,10 @@ inputs:
   s3-prefix:
     description: 'Optional key prefix inside the bucket.'
     required: false
+  s3-ttl-days:
+    description: 'Number of days before objects expire. Restore-only never writes lifecycle config; this input exists for input-shape parity with cirunlabs/cache/s3 and is ignored here.'
+    required: false
+    default: '30'
 outputs:
   cache-hit:
     description: 'A boolean value to indicate an exact match was found for the primary key'

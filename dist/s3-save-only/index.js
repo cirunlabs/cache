@@ -58441,6 +58441,66 @@ function saveCache(cfg, paths, primaryKey, crossOs) {
                 /* best effort */
             }
         }
+        if (cfg.ttlDays > 0) {
+            yield ensureLifecycle(client, cfg).catch(err => {
+                // Best-effort: a missing s3:PutLifecycleConfiguration permission
+                // shouldn't fail the cache save. Log so the operator notices.
+                core.warning(`S3 lifecycle: could not ensure ${cfg.ttlDays}-day expiry on ${cfg.prefix || "(root)"}: ${err.message}`);
+            });
+        }
+    });
+}
+// ensureLifecycle is idempotent: it reads the bucket's existing lifecycle
+// configuration, replaces only the rule keyed by our deterministic ID
+// (one per prefix), and PUTs the merged set back. Other rules — including
+// rules set by other repos sharing the bucket under different prefixes —
+// are preserved untouched.
+function ensureLifecycle(client, cfg) {
+    return __awaiter(this, void 0, void 0, function* () {
+        var _a, _b, _c;
+        const ruleId = `cirunlabs-cache-${cfg.prefix.replace(/\//g, "-") || "root"}`;
+        const filterPrefix = cfg.prefix
+            ? cfg.prefix.replace(/^\/+|\/+$/g, "") + "/"
+            : "";
+        const desired = {
+            ID: ruleId,
+            Status: "Enabled",
+            Filter: { Prefix: filterPrefix },
+            Expiration: { Days: cfg.ttlDays }
+        };
+        let existing = [];
+        try {
+            const out = yield client.send(new client_s3_1.GetBucketLifecycleConfigurationCommand({ Bucket: cfg.bucket }));
+            existing = out.Rules || [];
+        }
+        catch (err) {
+            // R2 / S3 return NoSuchLifecycleConfiguration when no rules are set.
+            // Treat as empty rule set; any other error propagates.
+            const code = (err === null || err === void 0 ? void 0 : err.name) || (err === null || err === void 0 ? void 0 : err.Code) || "";
+            const status = (_a = err === null || err === void 0 ? void 0 : err.$metadata) === null || _a === void 0 ? void 0 : _a.httpStatusCode;
+            if (code === "NoSuchLifecycleConfiguration" ||
+                code === "NoSuchLifecycleConfigurationError" ||
+                status === 404) {
+                existing = [];
+            }
+            else {
+                throw err;
+            }
+        }
+        // Skip the PUT if the desired rule is already present and matches.
+        const current = existing.find(r => r.ID === ruleId);
+        if (current &&
+            current.Status === "Enabled" &&
+            ((_b = current.Expiration) === null || _b === void 0 ? void 0 : _b.Days) === cfg.ttlDays &&
+            ((_c = current.Filter) === null || _c === void 0 ? void 0 : _c.Prefix) === filterPrefix) {
+            return;
+        }
+        const merged = [...existing.filter(r => r.ID !== ruleId), desired];
+        yield client.send(new client_s3_1.PutBucketLifecycleConfigurationCommand({
+            Bucket: cfg.bucket,
+            LifecycleConfiguration: { Rules: merged }
+        }));
+        core.info(`S3 lifecycle: ensured ${cfg.ttlDays}-day expiry on ${cfg.prefix || "(root)"} prefix`);
     });
 }
 
@@ -58496,13 +58556,19 @@ function readS3Config() {
     if (!bucket) {
         return null;
     }
+    const ttlRaw = core.getInput("s3-ttl-days") || "0";
+    const ttlDays = Number.parseInt(ttlRaw, 10);
+    if (Number.isNaN(ttlDays) || ttlDays < 0) {
+        throw new Error(`s3-ttl-days must be a non-negative integer, got "${ttlRaw}"`);
+    }
     return {
         bucket,
         endpoint: core.getInput("s3-endpoint") || undefined,
         region: core.getInput("s3-region") || "auto",
         accessKeyId: core.getInput("s3-access-key-id") || undefined,
         secretAccessKey: core.getInput("s3-secret-access-key") || undefined,
-        prefix: core.getInput("s3-prefix") || ""
+        prefix: core.getInput("s3-prefix") || "",
+        ttlDays
     };
 }
 

@@ -42,6 +42,10 @@ inputs:
   s3-prefix:
     description: 'Optional key prefix (subfolder) inside the bucket. Useful for sharing one bucket across multiple repos.'
     required: false
+  s3-ttl-days:
+    description: 'Ensures a bucket lifecycle rule that expires objects under s3-prefix after N days. Idempotent across runs; preserves any unrelated lifecycle rules. Set to 0 to disable (the action will not touch lifecycle config). Requires s3:PutLifecycleConfiguration on the credential — without it the action warns and keeps going.'
+    required: false
+    default: '30'
 outputs:
   cache-hit:
     description: 'A boolean value to indicate an exact match was found for the primary key'

@@ -31,6 +31,10 @@ inputs:
   s3-prefix:
     description: 'Optional key prefix inside the bucket.'
     required: false
+  s3-ttl-days:
+    description: 'Ensures a bucket lifecycle rule that expires objects under s3-prefix after N days. Set to 0 to disable. Idempotent; preserves unrelated rules. Requires s3:PutLifecycleConfiguration on the credential — without it the action warns and keeps going.'
+    required: false
+    default: '30'
 runs:
   using: 'node24'
   main: '../dist/s3-save-only/index.js'

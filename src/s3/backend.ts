@@ -1,8 +1,11 @@
 import {
+    GetBucketLifecycleConfigurationCommand,
     GetObjectCommand,
     HeadObjectCommand,
     ListObjectsV2Command,
-    S3Client
+    PutBucketLifecycleConfigurationCommand,
+    S3Client,
+    type LifecycleRule
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import * as core from "@actions/core";
@@ -412,4 +415,76 @@ export async function saveCache(
             /* best effort */
         }
     }
+
+    if (cfg.ttlDays > 0) {
+        await ensureLifecycle(client, cfg).catch(err => {
+            // Best-effort: a missing s3:PutLifecycleConfiguration permission
+            // shouldn't fail the cache save. Log so the operator notices.
+            core.warning(
+                `S3 lifecycle: could not ensure ${cfg.ttlDays}-day expiry on ${cfg.prefix || "(root)"}: ${(err as Error).message}`
+            );
+        });
+    }
+}
+
+// ensureLifecycle is idempotent: it reads the bucket's existing lifecycle
+// configuration, replaces only the rule keyed by our deterministic ID
+// (one per prefix), and PUTs the merged set back. Other rules — including
+// rules set by other repos sharing the bucket under different prefixes —
+// are preserved untouched.
+async function ensureLifecycle(client: S3Client, cfg: S3Config): Promise<void> {
+    const ruleId = `cirunlabs-cache-${cfg.prefix.replace(/\//g, "-") || "root"}`;
+    const filterPrefix = cfg.prefix
+        ? cfg.prefix.replace(/^\/+|\/+$/g, "") + "/"
+        : "";
+    const desired: LifecycleRule = {
+        ID: ruleId,
+        Status: "Enabled",
+        Filter: { Prefix: filterPrefix },
+        Expiration: { Days: cfg.ttlDays }
+    };
+
+    let existing: LifecycleRule[] = [];
+    try {
+        const out = await client.send(
+            new GetBucketLifecycleConfigurationCommand({ Bucket: cfg.bucket })
+        );
+        existing = out.Rules || [];
+    } catch (err: any) {
+        // R2 / S3 return NoSuchLifecycleConfiguration when no rules are set.
+        // Treat as empty rule set; any other error propagates.
+        const code = err?.name || err?.Code || "";
+        const status = err?.$metadata?.httpStatusCode;
+        if (
+            code === "NoSuchLifecycleConfiguration" ||
+            code === "NoSuchLifecycleConfigurationError" ||
+            status === 404
+        ) {
+            existing = [];
+        } else {
+            throw err;
+        }
+    }
+
+    // Skip the PUT if the desired rule is already present and matches.
+    const current = existing.find(r => r.ID === ruleId);
+    if (
+        current &&
+        current.Status === "Enabled" &&
+        current.Expiration?.Days === cfg.ttlDays &&
+        (current.Filter as any)?.Prefix === filterPrefix
+    ) {
+        return;
+    }
+
+    const merged = [...existing.filter(r => r.ID !== ruleId), desired];
+    await client.send(
+        new PutBucketLifecycleConfigurationCommand({
+            Bucket: cfg.bucket,
+            LifecycleConfiguration: { Rules: merged }
+        })
+    );
+    core.info(
+        `S3 lifecycle: ensured ${cfg.ttlDays}-day expiry on ${cfg.prefix || "(root)"} prefix`
+    );
 }
