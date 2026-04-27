@@ -58333,17 +58333,31 @@ function uploadFile(client, bucket, objectName, src) {
         yield upload.done();
     });
 }
+// expandTilde resolves a leading `~/` to the user's home dir. The action
+// receives paths verbatim from the workflow YAML (e.g. ~/.cache/go-build);
+// tar is invoked via execve with no shell, so `~` would otherwise be
+// passed as a literal character and stat-fail.
+function expandTilde(p) {
+    if (p === "~")
+        return os.homedir();
+    if (p.startsWith("~/"))
+        return path.join(os.homedir(), p.slice(2));
+    return p;
+}
 function makeArchive(paths) {
     return __awaiter(this, void 0, void 0, function* () {
         const tmp = path.join(os.tmpdir(), `cirunlabs-cache-${Date.now()}.tzst`);
-        // System tar with zstd. Available on every Linux runner; macOS uses bsdtar
-        // which also accepts --use-compress-program. zstd binary is preinstalled
-        // on github-hosted and cirun-provisioned runners.
+        // -P preserves absolute paths so caches under $HOME restore to their
+        // original location. Relative paths (./demo-cache) are unaffected.
+        // System tar with zstd. Available on every Linux runner; macOS uses
+        // bsdtar which also accepts --use-compress-program. zstd binary is
+        // preinstalled on github-hosted and cirun-provisioned runners.
         const args = [
             "-cf",
             tmp,
+            "-P",
             "--use-compress-program=zstd -T0 --long=30",
-            ...paths
+            ...paths.map(expandTilde)
         ];
         yield exec.exec("tar", args);
         return tmp;
@@ -58355,10 +58369,12 @@ function extractArchive(src) {
         // archives (the same `zstd -T0 --long=30` we use to compress emits
         // multiple frames, so decompression parallelises). On 1+ GB caches
         // this saves another 30-50% of extract time vs single-threaded
-        // unzstd.
+        // unzstd. -P matches the save side so absolute paths land back where
+        // they came from.
         yield exec.exec("tar", [
             "-xf",
             src,
+            "-P",
             "--use-compress-program=zstd -d -T0 --long=30"
         ]);
     });
