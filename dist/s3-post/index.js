@@ -58150,12 +58150,19 @@ function buildObjectName(cfg, cacheKey, version, crossOs) {
     return parts.join("/") + "/" + version + ".tzst";
 }
 function buildObjectPrefix(cfg, keyPrefix, crossOs) {
+    // No trailing slash. S3 ListObjectsV2 Prefix is a literal substring
+    // match — adding `/` would force the next character of the stored
+    // object key to be a slash, which never happens because the saved
+    // key embeds <key>/<version>.tzst (the slash is *between* key and
+    // version filename). Concretely, restore-keys "Linux-X64-go-" must
+    // prefix-match objects under "Linux-X64-go-<hash>/...", not require
+    // the key to literally start with "Linux-X64-go-/".
     const parts = [];
     if (cfg.prefix)
         parts.push(cfg.prefix.replace(/^\/+|\/+$/g, ""));
     parts.push(osTag(crossOs));
     parts.push(keyPrefix);
-    return parts.join("/") + "/";
+    return parts.join("/");
 }
 function newClient(cfg) {
     const opts = { region: cfg.region };
