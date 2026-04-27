@@ -34,10 +34,10 @@ inputs:
     default: 'auto'
     required: false
   s3-access-key-id:
-    description: 'S3 access key ID. Use a repository secret: `${{ secrets.R2_ACCESS_KEY_ID }}`.'
+    description: 'S3 access key ID. Use a repository secret (e.g. secrets.R2_ACCESS_KEY_ID).'
     required: false
   s3-secret-access-key:
-    description: 'S3 secret access key. Use a repository secret: `${{ secrets.R2_SECRET_ACCESS_KEY }}`.'
+    description: 'S3 secret access key. Use a repository secret (e.g. secrets.R2_SECRET_ACCESS_KEY).'
     required: false
   s3-prefix:
     description: 'Optional key prefix (subfolder) inside the bucket. Useful for sharing one bucket across multiple repos.'
