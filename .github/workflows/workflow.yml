@@ -9,6 +9,7 @@ on:
     branches:
       - main
       - releases/**
+      - cirun-fork
 
 permissions:
   contents: read
