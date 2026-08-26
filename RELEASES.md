@@ -2,7 +2,7 @@
 
 ## How to prepare a release
 
-> [!NOTE]  
+> [!NOTE]
 > Relevant for maintainers with write access only.
 
 1. Switch to a new branch from `main`.
@@ -21,9 +21,20 @@
     1. Publish the release.
 1. Navigate to https://github.com/actions/cache/actions/workflows/release-new-action-version.yml
     1. There should be a workflow run queued with the same version number.
-    1. Approve the run to publish the new version and update the major tags for this action. 
+    1. Approve the run to publish the new version and update the major tags for this action.
 
 ## Changelog
+
+### 6.1.0
+
+- Bump `@actions/cache` to v6.1.0 to pick up [actions/toolkit#2435 Handle cache write error due to read-only token](https://github.com/actions/toolkit/pull/2435)
+- Switch redundant "Cache save failed" warning to debug log in save-only
+
+### 6.0.0
+
+- Updated `@actions/cache` to ^6.0.1, `@actions/core` to ^3.0.1, `@actions/exec` to ^3.0.0, `@actions/io` to ^3.0.2
+- Migrated to ESM module system
+- Upgraded Jest to v30 and test infrastructure to be ESM compatible
 
 ### 5.0.4
 
