@@ -7,7 +7,8 @@ import {
     type LifecycleRule,
     ListObjectsV2Command,
     PutBucketLifecycleConfigurationCommand,
-    S3Client
+    S3Client,
+    S3ClientConfig
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import * as crypto from "crypto";
@@ -79,8 +80,24 @@ function buildObjectPrefix(
     return parts.join("/");
 }
 
+// awsErrorInfo pulls out the two fields the callers branch on. SDK v3 throws
+// S3ServiceException subclasses (name + $metadata), but S3-compatible stores
+// (R2 / B2 / MinIO) sometimes surface the raw XML error `Code` instead, so
+// both spellings are checked and anything else yields an empty code.
+function awsErrorInfo(err: unknown): { code: string; status?: number } {
+    const e = err as {
+        name?: string;
+        Code?: string;
+        $metadata?: { httpStatusCode?: number };
+    } | null;
+    return {
+        code: e?.name || e?.Code || "",
+        status: e?.$metadata?.httpStatusCode
+    };
+}
+
 function newClient(cfg: S3Config): S3Client {
-    const opts: any = { region: cfg.region };
+    const opts: S3ClientConfig = { region: cfg.region };
     if (cfg.endpoint) {
         const url = cfg.endpoint.startsWith("http")
             ? cfg.endpoint
@@ -107,12 +124,9 @@ async function objectExists(
             new HeadObjectCommand({ Bucket: bucket, Key: objectName })
         );
         return true;
-    } catch (err: any) {
-        if (
-            err?.$metadata?.httpStatusCode === 404 ||
-            err?.name === "NotFound" ||
-            err?.name === "NoSuchKey"
-        ) {
+    } catch (err) {
+        const { code, status } = awsErrorInfo(err);
+        if (status === 404 || code === "NotFound" || code === "NoSuchKey") {
             return false;
         }
         throw err;
@@ -215,9 +229,11 @@ async function downloadToFile(
     async function worker(): Promise<void> {
         const fh = await fs.promises.open(dest, "r+");
         try {
-            while (true) {
-                const idx = nextRange++;
-                if (idx >= ranges.length) return;
+            for (
+                let idx = nextRange++;
+                idx < ranges.length;
+                idx = nextRange++
+            ) {
                 const { start, end } = ranges[idx];
                 const out = await client.send(
                     new GetObjectCommand({
@@ -450,11 +466,10 @@ async function ensureLifecycle(client: S3Client, cfg: S3Config): Promise<void> {
             new GetBucketLifecycleConfigurationCommand({ Bucket: cfg.bucket })
         );
         existing = out.Rules || [];
-    } catch (err: any) {
+    } catch (err) {
         // R2 / S3 return NoSuchLifecycleConfiguration when no rules are set.
         // Treat as empty rule set; any other error propagates.
-        const code = err?.name || err?.Code || "";
-        const status = err?.$metadata?.httpStatusCode;
+        const { code, status } = awsErrorInfo(err);
         if (
             code === "NoSuchLifecycleConfiguration" ||
             code === "NoSuchLifecycleConfigurationError" ||
@@ -472,7 +487,7 @@ async function ensureLifecycle(client: S3Client, cfg: S3Config): Promise<void> {
         current &&
         current.Status === "Enabled" &&
         current.Expiration?.Days === cfg.ttlDays &&
-        (current.Filter as any)?.Prefix === filterPrefix
+        current.Filter?.Prefix === filterPrefix
     ) {
         return;
     }

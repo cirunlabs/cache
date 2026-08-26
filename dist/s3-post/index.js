@@ -65156,6 +65156,17 @@ function buildObjectPrefix(cfg, keyPrefix, crossOs) {
     parts.push(keyPrefix);
     return parts.join("/");
 }
+// awsErrorInfo pulls out the two fields the callers branch on. SDK v3 throws
+// S3ServiceException subclasses (name + $metadata), but S3-compatible stores
+// (R2 / B2 / MinIO) sometimes surface the raw XML error `Code` instead, so
+// both spellings are checked and anything else yields an empty code.
+function awsErrorInfo(err) {
+    const e = err;
+    return {
+        code: e?.name || e?.Code || "",
+        status: e?.$metadata?.httpStatusCode
+    };
+}
 function newClient(cfg) {
     const opts = { region: cfg.region };
     if (cfg.endpoint) {
@@ -65179,9 +65190,8 @@ async function objectExists(client, bucket, objectName) {
         return true;
     }
     catch (err) {
-        if (err?.$metadata?.httpStatusCode === 404 ||
-            err?.name === "NotFound" ||
-            err?.name === "NoSuchKey") {
+        const { code, status } = awsErrorInfo(err);
+        if (status === 404 || code === "NotFound" || code === "NoSuchKey") {
             return false;
         }
         throw err;
@@ -65256,10 +65266,7 @@ async function downloadToFile(client, bucket, objectName, dest, partSize = 32 * 
     async function worker() {
         const fh = await fs.promises.open(dest, "r+");
         try {
-            while (true) {
-                const idx = nextRange++;
-                if (idx >= ranges.length)
-                    return;
+            for (let idx = nextRange++; idx < ranges.length; idx = nextRange++) {
                 const { start, end } = ranges[idx];
                 const out = await client.send(new GetObjectCommand({
                     Bucket: bucket,
@@ -65434,8 +65441,7 @@ async function ensureLifecycle(client, cfg) {
     catch (err) {
         // R2 / S3 return NoSuchLifecycleConfiguration when no rules are set.
         // Treat as empty rule set; any other error propagates.
-        const code = err?.name || err?.Code || "";
-        const status = err?.$metadata?.httpStatusCode;
+        const { code, status } = awsErrorInfo(err);
         if (code === "NoSuchLifecycleConfiguration" ||
             code === "NoSuchLifecycleConfigurationError" ||
             status === 404) {

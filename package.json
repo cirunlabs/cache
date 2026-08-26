@@ -8,9 +8,9 @@
   "scripts": {
     "build": "tsc && ncc build -o dist/restore src/restore.ts && ncc build -o dist/save src/save.ts && ncc build -o dist/restore-only src/restoreOnly.ts && ncc build -o dist/save-only src/saveOnly.ts && ncc build -o dist/s3-main src/s3Main.ts && ncc build -o dist/s3-post src/s3Post.ts && ncc build -o dist/s3-restore-only src/s3RestoreOnly.ts && ncc build -o dist/s3-save-only src/s3SaveOnly.ts",
     "test": "tsc --noEmit && node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
-    "lint": "eslint **/*.ts --cache",
-    "format": "prettier --write **/*.ts",
-    "format-check": "prettier --check **/*.ts"
+    "lint": "eslint \"**/*.ts\" --cache",
+    "format": "prettier --write \"**/*.ts\"",
+    "format-check": "prettier --check \"**/*.ts\""
   },
   "repository": {
     "type": "git",
