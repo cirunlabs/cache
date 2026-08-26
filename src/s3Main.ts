@@ -4,9 +4,9 @@
 
 import * as core from "@actions/core";
 
+import { Inputs, Outputs, State } from "./constants";
 import { restoreCache } from "./s3/backend";
 import { readS3Config } from "./s3/inputs";
-import { Inputs, Outputs, State } from "./constants";
 
 async function run(): Promise<void> {
     try {

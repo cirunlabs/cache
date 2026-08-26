@@ -27,7 +27,9 @@ export function readS3Config(): S3Config | null {
     const ttlRaw = core.getInput("s3-ttl-days") || "0";
     const ttlDays = Number.parseInt(ttlRaw, 10);
     if (Number.isNaN(ttlDays) || ttlDays < 0) {
-        throw new Error(`s3-ttl-days must be a non-negative integer, got "${ttlRaw}"`);
+        throw new Error(
+            `s3-ttl-days must be a non-negative integer, got "${ttlRaw}"`
+        );
     }
     return {
         bucket,

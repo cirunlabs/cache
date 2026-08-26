@@ -1,8 +1,8 @@
 import * as core from "@actions/core";
 
+import { Inputs } from "./constants";
 import { saveCache } from "./s3/backend";
 import { readS3Config } from "./s3/inputs";
-import { Inputs } from "./constants";
 
 async function run(): Promise<void> {
     try {

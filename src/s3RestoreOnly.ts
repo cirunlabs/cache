@@ -1,14 +1,16 @@
 import * as core from "@actions/core";
 
+import { Inputs, Outputs } from "./constants";
 import { restoreCache } from "./s3/backend";
 import { readS3Config } from "./s3/inputs";
-import { Inputs, Outputs } from "./constants";
 
 async function run(): Promise<void> {
     try {
         const cfg = readS3Config();
         if (!cfg) {
-            core.setFailed("s3-bucket is required for cirunlabs/cache/s3-restore");
+            core.setFailed(
+                "s3-bucket is required for cirunlabs/cache/s3-restore"
+            );
             return;
         }
 

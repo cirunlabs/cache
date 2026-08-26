@@ -1,15 +1,15 @@
+import * as core from "@actions/core";
+import * as exec from "@actions/exec";
 import {
     GetBucketLifecycleConfigurationCommand,
     GetObjectCommand,
     HeadObjectCommand,
+    type LifecycleRule,
     ListObjectsV2Command,
     PutBucketLifecycleConfigurationCommand,
-    S3Client,
-    type LifecycleRule
+    S3Client
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
-import * as core from "@actions/core";
-import * as exec from "@actions/exec";
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as os from "os";
@@ -28,7 +28,7 @@ import { S3Config } from "./inputs";
 // different `path` inputs don't collide.
 
 interface ObjectKey {
-    key: string;       // user-supplied cache key
+    key: string; // user-supplied cache key
     objectName: string; // full S3 object key
     version: string;
 }
